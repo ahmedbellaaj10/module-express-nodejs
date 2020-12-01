@@ -1,3 +1,3 @@
 module.exports = {
-    secret: 'mysecretkey'  //going to be used later on for key token
+    secret:"${process.env.DB_USERNAME}"  //going to be used later on for key token
  }
