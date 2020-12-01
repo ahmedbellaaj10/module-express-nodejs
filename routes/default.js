@@ -22,7 +22,10 @@ const myKey = require("../mysetup/myurl");
       console.log(req);
       res.json({
         id: req.user.id,
-        name: req.user.name
+        name: req.user.name,
+        lastname:req.user.lastname,
+        email:req.user.email,
+        age:req.user.age
       });
     }
   );
@@ -30,10 +33,10 @@ const myKey = require("../mysetup/myurl");
   // The login route
   router.post("/login", async (req, res) => {  
     var newUser = {};
-    newUser.name = req.body.name;
+    newUser.email = req.body.email;
     newUser.password = req.body.password;
   
-    await User.findOne({ name: newUser.name })
+    await User.findOne({ email: newUser.email })
       .then(profile => {
         if (!profile) {
           res.send("User not exist");
@@ -77,7 +80,10 @@ const myKey = require("../mysetup/myurl");
 router.post("/signup", async (req, res) => {
     var newUser = new User({
       name: req.body.name,
-      password: req.body.password
+      password: req.body.password,
+      email:req.body.email,
+      age:req.body.age,
+      lastname:req.body.lastname
     });
     await User.findOne({ name: newUser.name })
       .then(async profile => {
