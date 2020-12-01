@@ -2,19 +2,28 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const cors = require('cors');
+var User = require('./models/user');
 const app = express();
-
-
+var passport = require('passport');
 require('dotenv').config()
+
 // MIDDLEWARES
 app.use(cors());
 // BODY PARSER
+
+app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
+
+//Passport middleware
+app.use(passport.initialize());
+//Config for JWT strate
+require("./strategies/jsonwtStrategy")(passport);
+
+
+
 // IMPORT ROUTES
 const defaultRoute = require('./routes/default');
 app.use('/api', defaultRoute)
-
-
 
 
 // CONNECT TO DB
