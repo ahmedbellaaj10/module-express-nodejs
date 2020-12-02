@@ -10,7 +10,7 @@ var User = require('../models/user');
 
 require('dotenv').config()
 const myKey = require("../mysetup/myurl");
-
+const { body, validationResult } = require('express-validator');
 
 
 
@@ -77,7 +77,17 @@ const myKey = require("../mysetup/myurl");
   });
 
 // The register route
-router.post("/signup", async (req, res) => {
+router.post("/signup",[
+  // username must be an email
+  body('email').isEmail(),
+  // password must be at least 5 chars long
+  body('password',"Password should be combination of one uppercase , one lower case,  one digit and min 8 , max 20 char long").matches("^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{7,20}$", "i")
+], async (req, res) => {
+  
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({ errors: errors.array() });
+  }
     var newUser = new User({
       name: req.body.name,
       password: req.body.password,
