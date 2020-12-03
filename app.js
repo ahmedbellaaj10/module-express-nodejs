@@ -2,23 +2,24 @@ const express = require('express');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const cors = require('cors');
-var User = require('./models/user');
+const User = require('./models/user'); // necessary to connect to DB  don't remove it !!!
 const app = express();
-var passport = require('passport');
+const passport = require('passport');
 require('dotenv').config()
-
+bodyParser.json({limit: "50mb"})
+app.use(express.json({limit: '50mb'}));
 // MIDDLEWARES
 app.use(cors());
 // BODY PARSER
-
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({extended: false}));
 app.use(bodyParser.json());
+
+// SERVING FILES
+app.use(express.static('media'));
 
 //Passport middleware
 app.use(passport.initialize());
-//Config for JWT strate
 require("./strategies/jsonwtStrategy")(passport);
-
 
 
 // IMPORT ROUTES
