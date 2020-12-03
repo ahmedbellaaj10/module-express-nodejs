@@ -18,42 +18,57 @@ require('dotenv').config()
 router.put(
     "/profile/update", [
         // age must be a number
-        body('age').isNumeric().custom(age => age > 15).withMessage('age must be at least 16'),
+        body('age').isNumeric().optional().custom(age =>  age > 15).withMessage('age must be at least 16'),
         // yearsOfExperience must be a number
-        body('yearsOfExperience').isNumeric()
-            .custom(experience => experience < 50 && experience >= 0).withMessage('experience must be between 0-50'),
+        body('yearsOfExperience').isNumeric().optional()
+            .custom(experience =>  experience < 50 && experience >= 0).withMessage('experience must be between 0-50'),
         // picture must be a base64
-        body('picture').isBase64(),
+        body('picture').isBase64().optional(),
+        body('name').isString().optional().isLength({ max: 15 }),
+        body('lastname').isString().optional().isLength({ max: 15 }),
+        body('description').isString().optional(),
     ],
     passport.authenticate("jwt", {session: false}),
     (req, res) => {
         try {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({errors: errors.array()});
-        }
-        User.findOne({'_id': req.user._id}, function (err, user) {
-            if (err) return res.status(404).send({error: 'Profile not found'});
-            const fileName = utils.generatePathFile( '.png');
-            fs.writeFile( fileName , req.body.picture, 'base64', function (err) {
-                if (err) {console.log('image saving :', err)}
-            });
-            user.updateOne({'picture': fileName.split('media')[1],'age': req.body.age,'yearsOfExperience': req.body.yearsOfExperience},
-                {rawResult: true}, async function (err, resp) {
-                    if (err) {
-                        res.status(400).send({error: 'update  failed' });
-                    } else {
-                        const user = await  userService.getUserById(req.user.id);
-                        return res.status(200).send(user);
-                    }
-                }
-            );
-        });
-    }
-        catch (error) {
-            return res.status(404).send({error: 'Profile not found'});
-        }}
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                return res.status(400).json({errors: errors.array()});
+            }
 
+            User.findOne({'_id': req.user._id}, async function (err, user) {
+                if (err) return res.status(404).send({error: 'Profile not found'});
+                if (req.body.picture) {
+                    const fileName = utils.generatePathFile('.png');
+                    fs.writeFile(fileName, req.body.picture, 'base64', function (err) {
+                        if (err) {
+                            console.log('image saving :', err)
+                        }
+                    });
+                    await user.updateOne({'picture': fileName.split('media')[1]});
+                }
+                user.updateOne({
+                        'age': req.body.age ? req.body.age : user.age,
+                        'name': req.body.name ? req.body.name : user.name,
+                        'lastname': req.body.lastname ? req.body.lastname : user.lastname,
+                        'description': req.body.description ? req.body.description : user.description,
+                        'yearsOfExperience': req.body.yearsOfExperience ? req.body.yearsOfExperience : user.yearsOfExperience
+
+                    },
+                    {rawResult: true}, async function (err, resp) {
+                        if (err) {
+                            res.status(400).send({error: 'update  failed'});
+                        } else {
+                            const user = await userService.getUserById(req.user.id);
+                            return res.status(200).send(user);
+                        }
+                    }
+                );
+            });
+        } catch (error) {
+            return res.status(404).send({error: 'Profile not found'});
+        }
+    }
 );
 
 // GET USER PROFILE
@@ -64,11 +79,9 @@ router.get(
         try {
             const user = await userService.getUserById(req.user.id);
             return res.status(200).send(user);
-        }
-        catch (error) {
+        } catch (error) {
             return res.status(404).send({error: 'Profile not found'});
         }
-
 
 
     }
@@ -104,7 +117,7 @@ router.post("/login", async (req, res) => {
                                 myKey.secret,
                                 {expiresIn: 3600},
                                 (err, token) => {
-                                   return  res.json({
+                                    return res.json({
                                         user: payload,
                                         success: true,
                                         token: "Bearer " + token

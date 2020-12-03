@@ -34,7 +34,11 @@ const UserSchema = mongoose.Schema({
         type: Boolean,
         require: false,
         default: false
+    },
+    description: {
+        type: String,
+        require: false
     }
-}, { timestamps: true });
+}, {timestamps: true});
 
 module.exports = User = mongoose.model('User', UserSchema);
