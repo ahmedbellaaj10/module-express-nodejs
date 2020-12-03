@@ -12,6 +12,7 @@ async function getUserById(id) {
         age: user.age,
         picture: user.picture,
         yearsOfExperience: user.yearsOfExperience,
+        description: user.description,
         createdAt: user.createdAt,
         updatedAt: user.updatedAt,
     }
