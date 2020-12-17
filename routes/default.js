@@ -11,6 +11,7 @@ const myKey = require("../mysetup/myurl");
 const {body, validationResult} = require('express-validator');
 const utils = require('../utils/utils');
 const userService = require('../services/user.service');
+const user = require('../models/user');
 
 
 require('dotenv').config()
@@ -203,7 +204,18 @@ router.post("/signup", [
         });
 });
 // Updating a service
-router.post("/services/update/:id",passport.authenticate("jwt", {session: false}),(req, res) => {
+router.post("/services/update/:id",passport.authenticate("jwt", {session: false}), (req, res) => {
+    Service.findOne({'_id': req.params.id}).then((sv) => {
+        if(sv){
+            console.log(sv.ownerID);
+        if(sv.ownerID!=req.user._id)
+        {   console.log(sv.ownerID);
+            return res.status(404).send({
+              message: "You are not the owner of the post",
+            });
+          } }
+    }) ;
+    
   Service.findByIdAndUpdate(req.params.id, req.body, { new: true })
     .then((service) => {
       if (!service) {
@@ -220,7 +232,18 @@ router.post("/services/update/:id",passport.authenticate("jwt", {session: false}
     });
 }) ;
 // Deleting a service
-router.post("/services/delete/:id",passport.authenticate("jwt", {session: false}),(req, res) => {
+router.post("/services/delete/:id",passport.authenticate("jwt", {session: false}),  (req, res) => {
+    Service.findOne({'_id': req.params.id}).then((sv) => {
+        if(sv){
+            console.log(sv.ownerID);
+        if(sv.ownerID!=req.user._id)
+        {   console.log(sv.ownerID);
+            return res.status(404).send({
+              message: "You are not the owner of the post",
+            });
+          } }
+    }) ;
+    
   Service.findByIdAndRemove(req.params.id)
     .then((service) => {
       if (!service) {
@@ -255,6 +278,7 @@ router.post("/services/create",passport.authenticate("jwt", {session: false}),(r
    * Create a Service
    */
   const service = new Service({
+    ownerID:  req.user._id,
     description: req.body.description,
     title: req.body.title,
     post: req.body.post,
