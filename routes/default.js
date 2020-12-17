@@ -6,6 +6,7 @@ const fs = require('fs');
 const bcrypt = require('bcrypt');
 const saltRounds = 10;
 const User = require('../models/user');
+const Service = require('../models/service');
 const myKey = require("../mysetup/myurl");
 const {body, validationResult} = require('express-validator');
 const utils = require('../utils/utils');
@@ -71,6 +72,10 @@ router.put(
     }
 );
 
+
+
+
+
 // GET USER PROFILE
 router.get(
     "/profile",
@@ -86,6 +91,12 @@ router.get(
 
     }
 );
+
+
+
+
+
+
 
 // The login route
 router.post("/login", async (req, res) => {
@@ -136,6 +147,13 @@ router.post("/login", async (req, res) => {
         });
 });
 
+
+
+
+
+
+
+
 // The register route
 router.post("/signup", [
     // username must be an email
@@ -184,6 +202,89 @@ router.post("/signup", [
             console.log("Error is", err.message);
         });
 });
+// Updating a service
+router.post("/services/update/:id",passport.authenticate("jwt", {session: false}),(req, res) => {
+  Service.findByIdAndUpdate(req.params.id, req.body, { new: true })
+    .then((service) => {
+      if (!service) {
+        return service.status(404).send({
+          message: "no service found",
+        });
+      }
+      res.status(200).send(service);
+    })
+    .catch((err) => {
+      return res.status(404).send({
+        message: "error while updating the post",
+      });
+    });
+}) ;
+// Deleting a service
+router.post("/services/delete/:id",passport.authenticate("jwt", {session: false}),(req, res) => {
+  Service.findByIdAndRemove(req.params.id)
+    .then((service) => {
+      if (!service) {
+        return res.status(404).send({
+          message: "service not found ",
+        });
+      }
+      res.send({ message: "service deleted successfully!" });
+    })
+    .catch((err) => {
+      return res.status(500).send({
+        message: "Could not delete service ",
+      });
+    });
+});
 
+// Showing all services
+router.get("/services/show",(req, res) => {
+  Service.find()
+    .sort({ name: -1 })
+    .then((services) => {
+      res.status(200).send(services);
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message: err.message || "Error Occured",
+      });
+    })}) ;
+// Creating a service route
+router.post("/services/create",passport.authenticate("jwt", {session: false}),(req, res) => {
+  /**
+   * Create a Service
+   */
+  const service = new Service({
+    description: req.body.description,
+    title: req.body.title,
+    post: req.body.post,
+    image: [],
+  });
+  /**
+   * Save service to database
+   */
+  
+  if (req.body.image) {
+    for(var i = 0 ; i<req.body.image.length ; i++ ){
+    var fileName = utils.generatePathFile('.png');
+    fs.writeFile(fileName, req.body.image[i], 'base64', function (err) {
+        if (err) {
+            console.log('image '+i+' saving :', err)
+        }
+    });
+    service.image.push(fileName.split('media')[1]);
+  }
+  }
 
+  service
+    .save()
+    .then((data) => {
+      res.send(data);
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message: err.message || "Some error occurred while creating the Service.",
+      });
+    });
+})
 module.exports = router;
