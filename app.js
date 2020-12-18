@@ -28,7 +28,7 @@ app.use('/api', defaultRoute)
 
 
 // CONNECT TO DB
-mongoose.connect(`mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.fqs8g.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority`, {
+mongoose.connect(`mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}${process.env.DB_CLUSTER}${process.env.DB_NAME}?retryWrites=true&w=majority`, {
         useCreateIndex: true, useUnifiedTopology: true, useNewUrlParser: true
     }, () => console.log('Successfully connected to DB')
 )
