@@ -14,6 +14,7 @@ const constant = require('../utils/constant');
 const userService = require('../services/user.service');
 const user = require('../models/user');
 const { uuid } = require('uuidv4');
+const sendSms = require('../twilio/twilio');
 
 
 require('dotenv').config()
@@ -213,6 +214,7 @@ router.post("/signup", [
         password: req.body.password,
         email: req.body.email,
         lastname: req.body.lastname,
+        phone: req.body.phone,
         verificationCode: uuid()
     });
     await User.findOne({email: newUser.email})
@@ -242,6 +244,60 @@ router.post("/signup", [
             console.log("Error is", err.message);
         });
 });
+/**
+ * Generating a phone code
+ */
+router.put("/generatephone",
+    passport.authenticate("jwt", {session: false}),
+    (req, res) => {
+        let randomNumber = Math.floor(Math.random() * (99999 - 10000) + 10000);
+        const welcomeMessage = 'Welcome to San3ti! Your verification code is '+randomNumber;
+        sendSms("+216"+req.user.phone, welcomeMessage);
+        User.findByIdAndUpdate(req.user._id, {phoneCode: randomNumber}, {new: true})
+        .then((user) => {
+            if (!user) {
+                return user.status(404).send({
+                    message: "Not Found",
+                });
+            }
+            res.status(200).send(user);
+        })
+        .catch((err) => {
+            return res.status(404).send({
+                message: "error while finding the user",
+            });
+        });
+    });
+
+
+/**
+ * Validating a phone code
+ */
+router.put("/validatephone",
+    passport.authenticate("jwt", {session: false}),
+    (req, res) => {
+        if(req.body.code == req.user.phoneCode)
+        {
+        User.findByIdAndUpdate(req.user._id, {phoneValid: true}, {new: true})
+        .then((user) => {
+            if (!user) {
+                return user.status(404).send({
+                    message: "Not Found",
+                });
+            }
+            res.status(200).send(user);
+        })
+        .catch((err) => {
+            return res.status(404).send({
+                message: "error while finding the user",
+            });
+        });
+    }
+    });
+
+
+
+
 /**
  * UPDATE A SERVICE
  */
