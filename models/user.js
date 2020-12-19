@@ -38,7 +38,16 @@ const UserSchema = mongoose.Schema({
     description: {
         type: String,
         require: false
-    }
+    },
+    isActivated: {
+        type: Boolean,
+        require: false,
+        default: false
+    },
+    verificationCode: {
+        type: String,
+        require: false,
+    },
 }, {timestamps: true});
 
 module.exports = User = mongoose.model('User', UserSchema);

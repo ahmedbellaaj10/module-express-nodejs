@@ -13,6 +13,7 @@ const utils = require('../utils/utils');
 const constant = require('../utils/constant');
 const userService = require('../services/user.service');
 const user = require('../models/user');
+const { uuid } = require('uuidv4');
 
 
 require('dotenv').config()
@@ -94,7 +95,41 @@ router.get(
     }
 );
 
+/**
+ * ACTIVATION ACCOUNT
+ */
+router.get("/account-activation/:id/:code",
+    async (req, res) => {
 
+    await User.findOne({'_id': req.params.id})
+        .then(async profile => {
+            if (profile) {
+                     if ((!profile.isActivated) && (profile.verificationCode == req.params.code)) {
+                         profile.verificationCode = null;
+                         profile.isActivated = true;
+                         await profile
+                             .save()
+                             .then(() => {
+                                 return res.redirect(process.env.FRONTEND_URL + '/login');
+                             })
+                             .catch(err => {
+                                 console.log("Error is ", err.message);
+                                 return res.redirect(process.env.FRONTEND_URL + '/');
+
+                             });
+
+                     }
+                     if (profile.isActivated) {
+                         return res.redirect(process.env.FRONTEND_URL + '/login');
+                     }
+            } else {
+                return res.redirect(process.env.FRONTEND_URL + '/');
+            }
+        })
+        .catch(err => {
+            return res.redirect(process.env.FRONTEND_URL + '/');
+        });
+});
 /**
  * LOGIN
  */
@@ -109,6 +144,9 @@ router.post("/login",
                 if (!profile) {
                     res.status(404).send({error: "User not exist"});
                 } else {
+                    if (!profile.isActivated) {
+                        res.status(400).send({error: "Account not activated"});
+                    }
                     bcrypt.compare(
                         newUser.password,
                         profile.password,
@@ -116,7 +154,6 @@ router.post("/login",
                             if (err) {
                                 console.log("Error is", err.message);
                             } else if (result === true) {
-                                //   res.send("User authenticated");
                                 const payload = {
                                     id: profile.id,
                                     name: profile.name,
@@ -170,7 +207,8 @@ router.post("/signup", [
         name: req.body.name,
         password: req.body.password,
         email: req.body.email,
-        lastname: req.body.lastname
+        lastname: req.body.lastname,
+        verificationCode: uuid()
     });
     await User.findOne({email: newUser.email})
         .then(async profile => {
@@ -183,10 +221,11 @@ router.post("/signup", [
                         await newUser
                             .save()
                             .then(() => {
+                                utils.verificationEmail(newUser.email, newUser.verificationCode, newUser._id);
                                 return res.status(200).send({response: `User Created Successfully, Welcome ${newUser.name}`});
                             })
                             .catch(err => {
-                                console.log("Error is ", err.message);
+                                return res.status(400).send({error: 'Cannot create User with such data !'});
                             });
                     }
                 });
