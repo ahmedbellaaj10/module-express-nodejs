@@ -104,7 +104,10 @@ router.get("/account-activation/:id/:code",
     await User.findOne({'_id': req.params.id})
         .then(async profile => {
             if (profile) {
-                     if ((!profile.isActivated) && (profile.verificationCode == req.params.code)) {
+                if (profile.isActivated) {
+                    return res.redirect(process.env.FRONTEND_URL + '/login');
+                }
+                else if (profile.verificationCode == req.params.code) {
                          profile.verificationCode = null;
                          profile.isActivated = true;
                          await profile
@@ -119,9 +122,11 @@ router.get("/account-activation/:id/:code",
                              });
 
                      }
-                     if (profile.isActivated) {
-                         return res.redirect(process.env.FRONTEND_URL + '/login');
-                     }
+                else {
+                    return res.redirect(process.env.FRONTEND_URL + '/');
+
+                }
+
             } else {
                 return res.redirect(process.env.FRONTEND_URL + '/');
             }
