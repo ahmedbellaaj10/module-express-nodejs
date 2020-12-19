@@ -324,7 +324,7 @@ router.delete("/service/delete/:id",
             });
         });
     });
-
+   
 /**
  * LIST SERVICES
  */
@@ -349,7 +349,6 @@ router.get("/service/:id",
         Service.findOne({'_id': req.params.id}).then((sv) => {
             if (sv) {
                 return res.status(200).send(sv);
-
             }
             else {
                  return res.status(404).send({
@@ -362,6 +361,7 @@ router.get("/service/:id",
             });
         });
     });
+    
 /**
  * CREATE A SERVICE
  */
@@ -402,4 +402,81 @@ router.post("/service/create",
                 });
             });
     })
+
+  /**
+ * Search a Profile by it's name
+ */
+router.get("/profile/list/name/:t",
+(req, res) => {
+    if(!req.params.t)
+    {
+        return res.status(404).send({message: "You didn't provide any search criteria"});
+    }
+    var regexQuery = {
+        name: new RegExp(req.params.t, 'i')
+      }
+    User.find(regexQuery)
+        .sort({name: -1})
+        .then((services) => {
+            return res.status(200).send(services);
+        })
+        .catch((err) => {
+            return res.status(500).send({
+                message: err.message || "Error Occurred",
+            });
+        })
+});
+    /**
+ * Search a Service by it's post
+ */
+router.get("/service/list/post/:t",
+(req, res) => {
+    if(!req.params.t)
+    {
+        return res.status(404).send({message: "You didn't provide any search criteria"});
+    }
+    var regexQuery = {
+        post: new RegExp(req.params.t, 'i')
+      }
+    Service.find(regexQuery)
+        .sort({name: -1})
+        .then((services) => {
+            return res.status(200).send(services);
+        })
+        .catch((err) => {
+            return res.status(500).send({
+                message: err.message || "Error Occurred",
+            });
+        })
+});
+/**
+ * Search a Service by it's title
+ */
+router.get("/service/list/title/:t",
+    (req, res) => {
+        if(!req.params.t)
+        {
+            return res.status(404).send({message: "You didn't provide any search criteria"});
+        }
+        var regexQuery = {
+            title: new RegExp(req.params.t, 'i')
+          }
+        Service.find(regexQuery)
+            .sort({name: -1})
+            .then((services) => {
+                return res.status(200).send(services);
+            })
+            .catch((err) => {
+                return res.status(500).send({
+                    message: err.message || "Error Occurred",
+                });
+            })
+    });
+
+
+
+
+
+
+
 module.exports = router;
