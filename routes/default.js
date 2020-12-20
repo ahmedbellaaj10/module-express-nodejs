@@ -8,12 +8,13 @@ const saltRounds = 10;
 const User = require('../models/user');
 const Service = require('../models/service');
 const myKey = require("../mysetup/myurl");
-const { body, validationResult } = require('express-validator');
+const {body, validationResult} = require('express-validator');
 const utils = require('../utils/utils');
 const constant = require('../utils/constant');
 const userService = require('../services/user.service');
+const serviceService = require('../services/service.service');
 const user = require('../models/user');
-const { uuid } = require('uuidv4');
+const {uuid} = require('uuidv4');
 const sendSms = require('../twilio/twilio');
 
 
@@ -24,27 +25,27 @@ require('dotenv').config()
  */
 router.put(
     "/profile/update", [
-    // age must be a number
-    body('age').isNumeric().optional().custom(age => age > 15).withMessage('age must be at least 16'),
-    // yearsOfExperience must be a number
-    body('yearsOfExperience').isNumeric().optional()
-        .custom(experience => experience < 50 && experience >= 0).withMessage('experience must be between 0-50'),
-    // picture must be a base64
-    body('picture').isBase64().optional(),
-    body('name').isString().optional().isLength({ max: 15 }),
-    body('lastname').isString().optional().isLength({ max: 15 }),
-    body('description').isString().optional(),
-],
-    passport.authenticate("jwt", { session: false }),
+        // age must be a number
+        body('age').isNumeric().optional().custom(age => age > 15).withMessage('age must be at least 16'),
+        // yearsOfExperience must be a number
+        body('yearsOfExperience').isNumeric().optional()
+            .custom(experience => experience < 50 && experience >= 0).withMessage('experience must be between 0-50'),
+        // picture must be a base64
+        body('picture').isBase64().optional(),
+        body('name').isString().optional().isLength({max: 15}),
+        body('lastname').isString().optional().isLength({max: 15}),
+        body('description').isString().optional(),
+    ],
+    passport.authenticate("jwt", {session: false}),
     (req, res) => {
         try {
             const errors = validationResult(req);
             if (!errors.isEmpty()) {
-                return res.status(400).json({ errors: errors.array() });
+                return res.status(400).json({errors: errors.array()});
             }
 
-            User.findOne({ '_id': req.user._id }, async function (err, user) {
-                if (err) return res.status(404).send({ error: 'Profile not found' });
+            User.findOne({'_id': req.user._id}, async function (err, user) {
+                if (err) return res.status(404).send({error: 'Profile not found'});
                 if (req.body.picture) {
                     const fileName = utils.generatePathFile('.png', constant.PATH.users);
                     fs.writeFile(fileName, req.body.picture, 'base64', function (err) {
@@ -52,19 +53,19 @@ router.put(
                             console.log('image saving :', err)
                         }
                     });
-                    await user.updateOne({ 'picture': fileName.split('media')[1] });
+                    await user.updateOne({'picture': fileName.split('media')[1]});
                 }
                 user.updateOne({
-                    'age': req.body.age ? req.body.age : user.age,
-                    'name': req.body.name ? req.body.name : user.name,
-                    'lastname': req.body.lastname ? req.body.lastname : user.lastname,
-                    'description': req.body.description ? req.body.description : user.description,
-                    'yearsOfExperience': req.body.yearsOfExperience ? req.body.yearsOfExperience : user.yearsOfExperience
+                        'age': req.body.age ? req.body.age : user.age,
+                        'name': req.body.name ? req.body.name : user.name,
+                        'lastname': req.body.lastname ? req.body.lastname : user.lastname,
+                        'description': req.body.description ? req.body.description : user.description,
+                        'yearsOfExperience': req.body.yearsOfExperience ? req.body.yearsOfExperience : user.yearsOfExperience
 
-                },
-                    { rawResult: true }, async function (err, resp) {
+                    },
+                    {rawResult: true}, async function (err, resp) {
                         if (err) {
-                            res.status(400).send({ error: 'update  failed' });
+                            res.status(400).send({error: 'update  failed'});
                         } else {
                             const user = await userService.getUserById(req.user.id);
                             return res.status(200).send(user);
@@ -73,7 +74,7 @@ router.put(
                 );
             });
         } catch (error) {
-            return res.status(404).send({ error: 'Profile not found' });
+            return res.status(404).send({error: 'Profile not found'});
         }
     }
 );
@@ -83,13 +84,13 @@ router.put(
  */
 router.get(
     "/profile",
-    passport.authenticate("jwt", { session: false }),
+    passport.authenticate("jwt", {session: false}),
     async (req, res) => {
         try {
             const user = await userService.getUserById(req.user.id);
             return res.status(200).send(user);
         } catch (error) {
-            return res.status(404).send({ error: 'Profile not found' });
+            return res.status(404).send({error: 'Profile not found'});
         }
 
 
@@ -102,13 +103,12 @@ router.get(
 router.get("/account-activation/:id/:code",
     async (req, res) => {
 
-        await User.findOne({ '_id': req.params.id })
+        await User.findOne({'_id': req.params.id})
             .then(async profile => {
                 if (profile) {
                     if (profile.isActivated) {
                         return res.redirect(process.env.FRONTEND_URL + '/login');
-                    }
-                    else if (profile.verificationCode == req.params.code) {
+                    } else if (profile.verificationCode == req.params.code) {
                         profile.verificationCode = null;
                         profile.isActivated = true;
                         await profile
@@ -122,8 +122,7 @@ router.get("/account-activation/:id/:code",
 
                             });
 
-                    }
-                    else {
+                    } else {
                         return res.redirect(process.env.FRONTEND_URL + '/');
 
                     }
@@ -145,13 +144,13 @@ router.post("/login",
         newUser.email = req.body.email;
         newUser.password = req.body.password;
 
-        await User.findOne({ email: newUser.email })
+        await User.findOne({email: newUser.email})
             .then(profile => {
                 if (!profile) {
-                    res.status(404).send({ error: "User not exist" });
+                    res.status(404).send({error: "User not exist"});
                 } else {
                     if (!profile.isActivated) {
-                        res.status(400).send({ error: "Account not activated" });
+                        res.status(400).send({error: "Account not activated"});
                     }
                     bcrypt.compare(
                         newUser.password,
@@ -169,7 +168,7 @@ router.post("/login",
                                 jsonwt.sign(
                                     payload,
                                     myKey.secret,
-                                    { expiresIn: 3600 },
+                                    {expiresIn: 3600},
                                     (err, token) => {
                                         return res.json({
                                             user: payload,
@@ -179,7 +178,7 @@ router.post("/login",
                                     }
                                 );
                             } else {
-                                return res.status(401).send({ error: "User Unauthorized Access" });
+                                return res.status(401).send({error: "User Unauthorized Access"});
                             }
                         }
                     );
@@ -207,7 +206,7 @@ router.post("/signup", [
 ], async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
+        return res.status(400).json({errors: errors.array()});
     }
     const newUser = new User({
         name: req.body.name,
@@ -216,7 +215,7 @@ router.post("/signup", [
         lastname: req.body.lastname,
         verificationCode: uuid()
     });
-    await User.findOne({ email: newUser.email })
+    await User.findOne({email: newUser.email})
         .then(async profile => {
             if (!profile) {
                 bcrypt.hash(newUser.password, saltRounds, async (err, hash) => {
@@ -228,15 +227,15 @@ router.post("/signup", [
                             .save()
                             .then(() => {
                                 utils.verificationEmail(newUser.email, newUser.verificationCode, newUser._id);
-                                return res.status(200).send({ response: `User Created Successfully, Welcome ${newUser.name}` });
+                                return res.status(200).send({response: `User Created Successfully, Welcome ${newUser.name}`});
                             })
                             .catch(err => {
-                                return res.status(400).send({ error: 'Cannot create User with such data !' });
+                                return res.status(400).send({error: 'Cannot create User with such data !'});
                             });
                     }
                 });
             } else {
-                return res.status(404).send({ error: "User already exists..." });
+                return res.status(404).send({error: "User already exists..."});
             }
         })
         .catch(err => {
@@ -246,66 +245,78 @@ router.post("/signup", [
 /**
  * Generating a phone code
  */
-router.put("/generatephone",
-    passport.authenticate("jwt", { session: false }),
+router.put("/generate-phone-code",
+    passport.authenticate("jwt", {session: false}),
     (req, res) => {
-        let randomNumber = Math.floor(Math.random() * (99999 - 10000) + 10000);
-        const welcomeMessage = 'Welcome to San3ti! Your verification code is ' + randomNumber;
-        sendSms("+216" + req.body.phone, welcomeMessage);
-        User.findByIdAndUpdate(req.user._id, {
-            phone: req.body.phone,
-            phoneCode: randomNumber
-        }, { new: true })
-            .then((user) => {
-                if (!user) {
-                    return user.status(404).send({
-                        message: "Not Found",
-                    });
-                }
-                res.status(200).send(user);
-            })
-            .catch((err) => {
-                return res.status(404).send({
-                    message: "error while finding the user",
-                });
-            });
-    });
-
-
-/**
- * Validating a phone code
- */
-router.put("/validatephone",
-    passport.authenticate("jwt", { session: false }),
-    (req, res) => {
-        if (req.body.code == req.user.phoneCode) {
-            User.findByIdAndUpdate(req.user._id, { phoneValid: true }, { new: true })
+        const user = req.user;
+        if (!user.phoneValid) {
+            const randomNumber = Math.floor(Math.random() * (999999 - 100000) + 100000);
+            const welcomeMessage = 'Welcome to San3ti! Your verification code is ' + randomNumber;
+            const phone = "+216" + req.body.phone;
+            console.log(phone);
+            sendSms(phone, welcomeMessage);
+            User.findByIdAndUpdate(req.user._id, {
+                phone: req.body.phone,
+                phoneCode: randomNumber
+            }, {new: true})
                 .then((user) => {
                     if (!user) {
                         return user.status(404).send({
                             message: "Not Found",
                         });
                     }
-                    res.status(200).send(user);
-                })
-                .catch((err) => {
-                    return res.status(404).send({
-                        message: "error while finding the user",
-                    });
+                    res.status(200).send({response: 'Check your phone'});
+                }).catch((err) => {
+                return res.status(404).send({
+                    message: "error while finding the user",
                 });
+            });
+        } else {
+            return res.status(400).send({
+                message: "Phone number already verified",
+            });
         }
+
+
     });
 
 
+/**
+ * Verify a phone code
+ */
+router.put("/verify-phone-code",
+    passport.authenticate("jwt", {session: false}),
+    (req, res) => {
+        if (req.user.phoneValid) {
+            res.status(400).send({'error': 'Phone number already verified'})
+        } else {
+            if (req.body.code == req.user.phoneCode) {
+                User.findByIdAndUpdate(req.user._id, {phoneValid: true}, {new: true})
+                    .then((user) => {
+                        if (!user) {
+                            return user.status(404).send({
+                                message: "Not Found",
+                            });
+                        }
+                        res.status(200).send({response: 'Phone Number verified'});
+                    })
+                    .catch((err) => {
+                        return res.status(404).send({
+                            message: "error while finding the user",
+                        });
+                    });
+            }
+        }
+    });
 
 
 /**
  * UPDATE A SERVICE
  */
 router.put("/service/update/:id",
-    passport.authenticate("jwt", { session: false }),
+    passport.authenticate("jwt", {session: false}),
     (req, res) => {
-        Service.findOne({ '_id': req.params.id }).then((sv) => {
+        Service.findOne({'_id': req.params.id}).then((sv) => {
             if (sv) {
                 if (sv.ownerID != req.user._id) {
                     return res.status(401).send({
@@ -315,7 +326,7 @@ router.put("/service/update/:id",
                 if (req.body.image) {
                     delete req.body.image;
                 }
-                Service.findByIdAndUpdate(req.params.id, req.body, { new: true })
+                Service.findByIdAndUpdate(req.params.id, req.body, {new: true})
                     .then((service) => {
                         if (!service) {
                             return service.status(404).send({
@@ -329,8 +340,7 @@ router.put("/service/update/:id",
                             message: "error while updating the post",
                         });
                     });
-            }
-            else {
+            } else {
                 return res.status(404).send({
                     message: "Not found !",
                 });
@@ -346,9 +356,9 @@ router.put("/service/update/:id",
  * DELETE A SERVICE
  */
 router.delete("/service/delete/:id",
-    passport.authenticate("jwt", { session: false }),
+    passport.authenticate("jwt", {session: false}),
     (req, res) => {
-        Service.findOne({ '_id': req.params.id }).then((sv) => {
+        Service.findOne({'_id': req.params.id}).then((sv) => {
             if (sv) {
                 if (sv.ownerID != req.user._id) {
                     return res.status(401).send({
@@ -362,15 +372,14 @@ router.delete("/service/delete/:id",
                                 message: "Not Found",
                             });
                         }
-                        res.status(200).send({ message: "service deleted successfully!" });
+                        res.status(200).send({message: "service deleted successfully!"});
                     })
                     .catch((err) => {
                         return res.status(500).send({
                             message: "Could not delete service ",
                         });
                     });
-            }
-            else {
+            } else {
                 return res.status(404).send({
                     message: "Not found !",
                 });
@@ -386,28 +395,27 @@ router.delete("/service/delete/:id",
  * LIST SERVICES
  */
 router.get("/service/list",
-    (req, res) => {
-        Service.find()
-            .sort({ name: -1 })
-            .then((services) => {
-                return res.status(200).send(services);
-            })
-            .catch((err) => {
-                return res.status(500).send({
-                    message: err.message || "Error Occurred",
-                });
-            })
+    async (req, res) => {
+        try {
+            const search = req.query.search ? req.query.search : '';
+            const userId = req.query.userId ? req.query.userId : '';
+            const services = await serviceService.getServicesFilter(search,userId);
+            return res.status(200).send(services);
+        }   catch (e) {
+            res.status(500).send({
+                message: "Some error occurred while querying services.",
+            });
+        }
     });
 /**
  * GET A SERVICE BY ID
  */
 router.get("/service/:id",
     (req, res) => {
-        Service.findOne({ '_id': req.params.id }).then((sv) => {
+        Service.findOne({'_id': req.params.id}).then((sv) => {
             if (sv) {
                 return res.status(200).send(sv);
-            }
-            else {
+            } else {
                 return res.status(404).send({
                     message: "Not found !",
                 });
@@ -423,8 +431,13 @@ router.get("/service/:id",
  * CREATE A SERVICE
  */
 router.post("/service/create",
-    passport.authenticate("jwt", { session: false }),
+    passport.authenticate("jwt", {session: false}),
     (req, res) => {
+        if (!req.user.isArtisan) {
+            return res.status(401).send(
+                {error: 'You must be registered as an artisan to create services'}
+            );
+        }
         const service = new Service({
             ownerID: req.user._id,
             description: req.body.description,
@@ -461,74 +474,21 @@ router.post("/service/create",
     })
 
 /**
-* Search a Profile by it's name
-*/
-router.get("/profile/list/name/:t",
-    (req, res) => {
-        if (!req.params.t) {
-            return res.status(404).send({ message: "You didn't provide any search criteria" });
-        }
-        var regexQuery = {
-            name: new RegExp(req.params.t, 'i')
-        }
-        User.find(regexQuery)
-            .sort({ name: -1 })
-            .then((services) => {
-                return res.status(200).send(services);
-            })
-            .catch((err) => {
-                return res.status(500).send({
-                    message: err.message || "Error Occurred",
-                });
-            })
-    });
-/**
-* Search a Service by it's post
-*/
-router.get("/service/list/post/:t",
-    (req, res) => {
-        if (!req.params.t) {
-            return res.status(404).send({ message: "You didn't provide any search criteria" });
-        }
-        var regexQuery = {
-            post: new RegExp(req.params.t, 'i')
-        }
-        Service.find(regexQuery)
-            .sort({ name: -1 })
-            .then((services) => {
-                return res.status(200).send(services);
-            })
-            .catch((err) => {
-                return res.status(500).send({
-                    message: err.message || "Error Occurred",
-                });
-            })
-    });
-/**
- * Search a Service by it's title
+ * List Profile + Filters
  */
-router.get("/service/list/title/:t",
-    (req, res) => {
-        if (!req.params.t) {
-            return res.status(404).send({ message: "You didn't provide any search criteria" });
-        }
-        var regexQuery = {
-            title: new RegExp(req.params.t, 'i')
-        }
-        Service.find(regexQuery)
-            .sort({ name: -1 })
-            .then((services) => {
-                return res.status(200).send(services);
-            })
-            .catch((err) => {
-                return res.status(500).send({
-                    message: err.message || "Error Occurred",
-                });
-            })
+router.get("/profile/list",
+    async (req, res) => {
+    try {
+        const search = req.query.search ? req.query.search : '';
+        const users = await userService.getArtisansFilter(search);
+        return res.status(200).send(users);
+    }   catch (e) {
+        res.status(500).send({
+            message: "Some error occurred while querying users.",
+        });
+    }
+
     });
-
-
-
 
 
 

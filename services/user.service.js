@@ -8,7 +8,9 @@ async function getUserById(id) {
         name: user.name,
         lastname: user.lastname,
         email: user.email,
+        phone: user.phone,
         isAdmin: user.isAdmin,
+        isArtisan: user.isArtisan,
         age: user.age,
         picture: user.picture,
         yearsOfExperience: user.yearsOfExperience,
@@ -18,6 +20,38 @@ async function getUserById(id) {
     }
 }
 
+async function getArtisansFilter(search='') {
+    const filter = {
+        $or: [{ name: new RegExp(search, 'i') },
+            { description: new RegExp(search, 'i') },
+            { lastname: new RegExp(search, 'i') },
+            { email: new RegExp(search, 'i') },
+            ],
+
+        isArtisan: true,
+    }
+    const users = await User.find(filter)
+        .sort({updatedAt: -1});
+    return users.map((user) => {
+        return {
+            id: user.id,
+            name: user.name,
+            lastname: user.lastname,
+            email: user.email,
+            phone: user.phone,
+            age: user.age,
+            picture: user.picture,
+            yearsOfExperience: user.yearsOfExperience,
+            description: user.description,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+        }
+
+    });
+
+}
+
 module.exports = {
-    getUserById
+    getUserById,
+    getArtisansFilter
 }

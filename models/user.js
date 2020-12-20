@@ -60,6 +60,11 @@ const UserSchema = mongoose.Schema({
     phoneCode:{
         type: Number,
         require: false,
+    },
+    isArtisan:{
+        type: Boolean,
+        require: false,
+        default: false
     }
 }, {timestamps: true});
 
