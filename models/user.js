@@ -48,6 +48,24 @@ const UserSchema = mongoose.Schema({
         type: String,
         require: false,
     },
+    phone:{
+        type: String,
+        require: false,
+    },
+    phoneValid: {
+        type: Boolean,
+        require: false,
+        default: false
+    },
+    phoneCode:{
+        type: Number,
+        require: false,
+    },
+    isArtisan:{
+        type: Boolean,
+        require: false,
+        default: false
+    }
 }, {timestamps: true});
 
 module.exports = User = mongoose.model('User', UserSchema);

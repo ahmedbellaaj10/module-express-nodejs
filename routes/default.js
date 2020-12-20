@@ -12,8 +12,10 @@ const {body, validationResult} = require('express-validator');
 const utils = require('../utils/utils');
 const constant = require('../utils/constant');
 const userService = require('../services/user.service');
+const serviceService = require('../services/service.service');
 const user = require('../models/user');
-const { uuid } = require('uuidv4');
+const {uuid} = require('uuidv4');
+const sendSms = require('../twilio/twilio');
 
 
 require('dotenv').config()
@@ -101,40 +103,38 @@ router.get(
 router.get("/account-activation/:id/:code",
     async (req, res) => {
 
-    await User.findOne({'_id': req.params.id})
-        .then(async profile => {
-            if (profile) {
-                if (profile.isActivated) {
-                    return res.redirect(process.env.FRONTEND_URL + '/login');
-                }
-                else if (profile.verificationCode == req.params.code) {
-                         profile.verificationCode = null;
-                         profile.isActivated = true;
-                         await profile
-                             .save()
-                             .then(() => {
-                                 return res.redirect(process.env.FRONTEND_URL + '/login');
-                             })
-                             .catch(err => {
-                                 console.log("Error is ", err.message);
-                                 return res.redirect(process.env.FRONTEND_URL + '/');
+        await User.findOne({'_id': req.params.id})
+            .then(async profile => {
+                if (profile) {
+                    if (profile.isActivated) {
+                        return res.redirect(process.env.FRONTEND_URL + '/login');
+                    } else if (profile.verificationCode == req.params.code) {
+                        profile.verificationCode = null;
+                        profile.isActivated = true;
+                        await profile
+                            .save()
+                            .then(() => {
+                                return res.redirect(process.env.FRONTEND_URL + '/login');
+                            })
+                            .catch(err => {
+                                console.log("Error is ", err.message);
+                                return res.redirect(process.env.FRONTEND_URL + '/');
 
-                             });
+                            });
 
-                     }
-                else {
+                    } else {
+                        return res.redirect(process.env.FRONTEND_URL + '/');
+
+                    }
+
+                } else {
                     return res.redirect(process.env.FRONTEND_URL + '/');
-
                 }
-
-            } else {
+            })
+            .catch(err => {
                 return res.redirect(process.env.FRONTEND_URL + '/');
-            }
-        })
-        .catch(err => {
-            return res.redirect(process.env.FRONTEND_URL + '/');
-        });
-});
+            });
+    });
 /**
  * LOGIN
  */
@@ -243,6 +243,74 @@ router.post("/signup", [
         });
 });
 /**
+ * Generating a phone code
+ */
+router.put("/generate-phone-code",
+    passport.authenticate("jwt", {session: false}),
+    (req, res) => {
+        const user = req.user;
+        if (!user.phoneValid) {
+            const randomNumber = Math.floor(Math.random() * (999999 - 100000) + 100000);
+            const welcomeMessage = 'Welcome to San3ti! Your verification code is ' + randomNumber;
+            const phone = "+216" + req.body.phone;
+            console.log(phone);
+            sendSms(phone, welcomeMessage);
+            User.findByIdAndUpdate(req.user._id, {
+                phone: req.body.phone,
+                phoneCode: randomNumber
+            }, {new: true})
+                .then((user) => {
+                    if (!user) {
+                        return user.status(404).send({
+                            message: "Not Found",
+                        });
+                    }
+                    res.status(200).send({response: 'Check your phone'});
+                }).catch((err) => {
+                return res.status(404).send({
+                    message: "error while finding the user",
+                });
+            });
+        } else {
+            return res.status(400).send({
+                message: "Phone number already verified",
+            });
+        }
+
+
+    });
+
+
+/**
+ * Verify a phone code
+ */
+router.put("/verify-phone-code",
+    passport.authenticate("jwt", {session: false}),
+    (req, res) => {
+        if (req.user.phoneValid) {
+            res.status(400).send({'error': 'Phone number already verified'})
+        } else {
+            if (req.body.code == req.user.phoneCode) {
+                User.findByIdAndUpdate(req.user._id, {phoneValid: true}, {new: true})
+                    .then((user) => {
+                        if (!user) {
+                            return user.status(404).send({
+                                message: "Not Found",
+                            });
+                        }
+                        res.status(200).send({response: 'Phone Number verified'});
+                    })
+                    .catch((err) => {
+                        return res.status(404).send({
+                            message: "error while finding the user",
+                        });
+                    });
+            }
+        }
+    });
+
+
+/**
  * UPDATE A SERVICE
  */
 router.put("/service/update/:id",
@@ -272,8 +340,7 @@ router.put("/service/update/:id",
                             message: "error while updating the post",
                         });
                     });
-            }
-            else {
+            } else {
                 return res.status(404).send({
                     message: "Not found !",
                 });
@@ -312,9 +379,8 @@ router.delete("/service/delete/:id",
                             message: "Could not delete service ",
                         });
                     });
-            }
-            else {
-                 return  res.status(404).send({
+            } else {
+                return res.status(404).send({
                     message: "Not found !",
                 });
             }
@@ -329,17 +395,17 @@ router.delete("/service/delete/:id",
  * LIST SERVICES
  */
 router.get("/service/list",
-    (req, res) => {
-        Service.find()
-            .sort({name: -1})
-            .then((services) => {
-                return res.status(200).send(services);
-            })
-            .catch((err) => {
-                return res.status(500).send({
-                    message: err.message || "Error Occurred",
-                });
-            })
+    async (req, res) => {
+        try {
+            const search = req.query.search ? req.query.search : '';
+            const userId = req.query.userId ? req.query.userId : '';
+            const services = await serviceService.getServicesFilter(search,userId);
+            return res.status(200).send(services);
+        }   catch (e) {
+            res.status(500).send({
+                message: "Some error occurred while querying services.",
+            });
+        }
     });
 /**
  * GET A SERVICE BY ID
@@ -349,10 +415,8 @@ router.get("/service/:id",
         Service.findOne({'_id': req.params.id}).then((sv) => {
             if (sv) {
                 return res.status(200).send(sv);
-
-            }
-            else {
-                 return res.status(404).send({
+            } else {
+                return res.status(404).send({
                     message: "Not found !",
                 });
             }
@@ -362,12 +426,18 @@ router.get("/service/:id",
             });
         });
     });
+
 /**
  * CREATE A SERVICE
  */
 router.post("/service/create",
     passport.authenticate("jwt", {session: false}),
     (req, res) => {
+        if (!req.user.isArtisan) {
+            return res.status(401).send(
+                {error: 'You must be registered as an artisan to create services'}
+            );
+        }
         const service = new Service({
             ownerID: req.user._id,
             description: req.body.description,
@@ -402,4 +472,25 @@ router.post("/service/create",
                 });
             });
     })
+
+/**
+ * List Profile + Filters
+ */
+router.get("/profile/list",
+    async (req, res) => {
+    try {
+        const search = req.query.search ? req.query.search : '';
+        const users = await userService.getArtisansFilter(search);
+        return res.status(200).send(users);
+    }   catch (e) {
+        res.status(500).send({
+            message: "Some error occurred while querying users.",
+        });
+    }
+
+    });
+
+
+
+
 module.exports = router;
