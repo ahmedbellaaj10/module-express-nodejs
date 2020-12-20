@@ -50,7 +50,7 @@ const UserSchema = mongoose.Schema({
     },
     phone:{
         type: String,
-        require: true,
+        require: false,
     },
     phoneValid: {
         type: Boolean,
