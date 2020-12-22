@@ -203,7 +203,8 @@ router.post("/signup", [
         " one digit and min 8 , " +
         "max 20 char long")
         .matches("^(?=.*\d)(?=.*[a-z])(?=.*[A-Z]).{7,20}$", "i")
-], async (req, res) => {
+],
+    async (req, res) => {
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
         return res.status(400).json({errors: errors.array()});
@@ -245,7 +246,7 @@ router.post("/signup", [
 /**
  * Generating a phone code
  */
-router.put("/generate-phone-code",
+router.post("/generate-phone-code",
     passport.authenticate("jwt", {session: false}),
     (req, res) => {
         const user = req.user;
@@ -284,7 +285,7 @@ router.put("/generate-phone-code",
 /**
  * Verify a phone code
  */
-router.put("/verify-phone-code",
+router.post("/verify-phone-code",
     passport.authenticate("jwt", {session: false}),
     (req, res) => {
         if (req.user.phoneValid) {
@@ -490,7 +491,19 @@ router.get("/profile/list",
 
     });
 
+router.get(
+    "/profile/:id",
+    async (req, res) => {
+        try {
+            const user = await userService.getUserById(req.params.id);
+            return res.status(200).send(user);
+        } catch (error) {
+            return res.status(404).send({error: 'Profile not found'});
+        }
 
+
+    }
+);
 
 
 module.exports = router;
