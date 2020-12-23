@@ -9,6 +9,7 @@ async function getUserById(id) {
         lastname: user.lastname,
         email: user.email,
         phone: user.phone,
+        phoneValid: user.phoneValid,
         isAdmin: user.isAdmin,
         isArtisan: user.isArtisan,
         age: user.age,
@@ -28,6 +29,7 @@ async function getArtisansFilter(search='') {
             { email: new RegExp(search, 'i') },
             ],
 
+        isActivated: true,
         isArtisan: true,
     }
     const users = await User.find(filter)
@@ -39,6 +41,9 @@ async function getArtisansFilter(search='') {
             lastname: user.lastname,
             email: user.email,
             phone: user.phone,
+            phoneValid: user.phoneValid,
+            isAdmin: user.isAdmin,
+            isArtisan: user.isArtisan,
             age: user.age,
             picture: user.picture,
             yearsOfExperience: user.yearsOfExperience,

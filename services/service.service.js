@@ -8,10 +8,14 @@ async function getServicesFilter(search, userId) {
             { description: new RegExp(search, 'i') },
             { post: new RegExp(search, 'i') },
         ],
-        ownerID: new RegExp(userId, 'i')
-
     }
-    return await Service.find(filter)
+    if (userId.match(/^[0-9a-fA-F]{24}$/)) {
+        filter.ownerID  = userId
+    }
+    return await Service.find(filter).populate('ownerID',
+        ['-password'
+        ,'-verificationCode',
+        '-phoneCode'])
         .sort({updatedAt: -1})
 
 
