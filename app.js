@@ -35,4 +35,3 @@ mongoose.connect(`mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASS
 // LISTENING ON PORT :
 const port = process.env.PORT || 4200
 app.listen(port, () => console.log(`Listening on port ${port} ...`));
-
